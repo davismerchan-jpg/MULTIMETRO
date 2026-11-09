@@ -29,6 +29,8 @@ svg{width:100%;height:auto;display:block}
 table{width:100%;border-collapse:collapse;font-size:14px}td{padding:4px 3px;vertical-align:middle}input.mi{width:100%;box-sizing:border-box;padding:7px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--fg);font-size:15px}.cap{flex:none;padding:7px 10px;white-space:nowrap}.ok{color:#1f9d55;font-weight:700}.bad{color:#d23a2f;font-weight:700}
 .sc{fill:var(--fg);font-size:14px;text-anchor:middle;font-family:system-ui,sans-serif}.drag{cursor:grab;touch-action:none}
 .pol{display:none;position:sticky;top:8px;z-index:20;background:#e00000;color:#fff;font-weight:900;font-size:clamp(26px,7vw,46px);line-height:1.15;text-align:center;padding:22px 14px;border-radius:14px;margin-bottom:12px;border:4px solid #fff;box-shadow:0 6px 24px rgba(224,0,0,.55);animation:pp .8s infinite alternate}@keyframes pp{to{background:#a30000}}
+#knob,.jack,.btn{touch-action:none}button,select{touch-action:manipulation}select,input.mi{font-size:16px}html{-webkit-text-size-adjust:100%}
+@media(max-width:700px){body{padding:10px}.card{padding:12px}.wrap{gap:10px}}
 </style>
 </head>
 <body>
@@ -99,7 +101,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}td{padding:4px 3px;vert
    <text x="452" y="410" font-size="6">MADE IN CHINA</text>
   </g>
   <rect x="437" y="443" width="26" height="14" rx="4" fill="#1b1b1b"/>
-  <text class="sc" x="640" y="256" style="font-size:12px">Conector de salida (vista frontal)</text>
+  <text class="sc" x="640" y="256" style="font-size:12px">Salida (frente)</text>
   <circle cx="640" cy="335" r="66" fill="#111"/>
   <circle cx="640" cy="335" r="60" fill="#8f949a" stroke="#555" stroke-width="3"/>
   <circle cx="640" cy="335" r="42" fill="#15171a" stroke="#6b7076" stroke-width="3"/>
@@ -274,10 +276,10 @@ function buildScene(){const g=$("plugs");
   const tp=mk("circle",{r:10,fill:c,stroke:"#fff","stroke-width":2.5,class:"drag"},g);
   el[w]={c0,c1,plug,tip:tp};
   mkDrag(plug,p=>{ovr[w]=[p.x,p.y];renderPlugs()},p=>{const k=nearest(p,{A:[73,500],COM:[150,500],V:[227,500]},34);if(w==="red")jack=k;else blkJack=k;ovr[w]=null;hold=false;frozen=null;update()});
-  mkDrag(tp,p=>{tip[w]=[p.x,p.y];renderPlugs()},p=>{let b=null,bd=36;if(SRC()==="dc"){const dx=p.x-640,dy=p.y-335,d=Math.hypot(dx,dy);
-   if(d<=30){b={n:"P",x:640,y:335}}else if(d<=72){b={n:"M",x:p.x,y:p.y}}}
-  else{(CP).forEach(c=>{const d=Math.hypot(p.x-c.x,p.y-c.y);if(d<bd){bd=d;b=c}})}
-  $(w).value=b?b.n:"";if(b)tip[w]=[b.x,b.y];hold=false;frozen=null;update()});
+  mkDrag(tp,p=>{tip[w]=[p.x,p.y];renderPlugs()},p=>{const q=toDev(p);let b=null,bd=36;if(SRC()==="dc"){const dx=q.x-640,dy=q.y-335,d=Math.hypot(dx,dy);
+   if(d<=30){b={n:"P",x:640,y:335}}else if(d<=72){b={n:"M",x:q.x,y:q.y}}}
+  else{(CP).forEach(c=>{const d=Math.hypot(q.x-c.x,q.y-c.y);if(d<bd){bd=d;b=c}})}
+  $(w).value=b?b.n:"";if(b)tip[w]=fromDev(b.x,b.y);hold=false;frozen=null;update()});
   $(w).addEventListener("change",()=>{syncTip(w);renderPlugs()})});
  renderPlugs()}
 function renderPlugs(){if(!el.red)return;const both=jack&&jack===blkJack;
@@ -285,7 +287,7 @@ function renderPlugs(){if(!el.red)return;const both=jack&&jack===blkJack;
   const p=ovr[w]||(k?[JX[k]+(both?(w==="red"?-6:6):0),500]:PARK[w]),t=tip[w];
   const d="M"+p[0]+" "+p[1]+" C"+p[0]+" "+(p[1]+70)+" "+t[0]+" "+(t[1]+110)+" "+t[0]+" "+t[1];
   el[w].c0.setAttribute("d",d);el[w].c1.setAttribute("d",d);
-  el[w].plug.setAttribute("cx",p[0]);el[w].plug.setAttribute("cy",p[1]);el[w].plug.setAttribute("r",(both&&!ovr[w])?5:8);
+  el[w].plug.setAttribute("cx",p[0]);el[w].plug.setAttribute("cy",p[1]);el[w].plug.setAttribute("r",(both&&!ovr[w])?(MOB?7:5):(MOB?12:8));el[w].tip.setAttribute("r",MOB?17:10);
   el[w].tip.setAttribute("cx",t[0]);el[w].tip.setAttribute("cy",t[1])})}
 function update(){
  const o=measure();
@@ -347,7 +349,21 @@ $("src").addEventListener("change",()=>{const d=SRC()==="dc";setNodes();
  $("vac").style.display=document.querySelector('label[for="vac"]').style.display=d?"none":"";
  $("tAC").style.display=d?"none":"";$("tDC").style.display=d?"":"none";
  pos=d?3:7;hold=false;frozen=null;renderPlugs();update()});
-buildScene();update();
+let MOB=false;const LAY={ox:345,oy:150,s:1};
+function fromDev(x,y){return [LAY.ox+(x-345)*LAY.s,LAY.oy+(y-150)*LAY.s]}
+function toDev(p){return {x:345+(p.x-LAY.ox)/LAY.s,y:150+(p.y-LAY.oy)/LAY.s}}
+const CT0=JSON.parse(JSON.stringify(CT)),CTD0=JSON.parse(JSON.stringify(CTD)),REST0=JSON.parse(JSON.stringify(REST));
+function applyLayout(){const m=window.innerWidth<=700;if(m===MOB&&el.red&&LAY.done)return;MOB=m;LAY.done=1;
+ LAY.ox=m?10:345;LAY.oy=m?600:150;LAY.s=m?0.75:1;
+ svg.setAttribute("viewBox",m?"0 0 300 960":"0 0 760 580");
+ const tr="translate("+LAY.ox+","+LAY.oy+") scale("+LAY.s+") translate(-345,-150)";
+ $("outlet").setAttribute("transform",tr);$("dcsrc").setAttribute("transform",tr);
+ for(const k in CT0)CT[k]=fromDev(CT0[k][0],CT0[k][1]);
+ for(const k in CTD0)CTD[k]=fromDev(CTD0[k][0],CTD0[k][1]);
+ for(const k in REST0)REST[k]=fromDev(REST0[k][0],REST0[k][1]);
+ ["red","blk"].forEach(syncTip);renderPlugs()}
+window.addEventListener("resize",applyLayout);
+buildScene();applyLayout();update();
 setInterval(()=>{if(!hold){stepNoise();update()}},900);
 </script>
 </body>
