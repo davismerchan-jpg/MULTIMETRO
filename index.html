@@ -263,8 +263,9 @@ const tip={red:REST.red.slice(),blk:REST.blk.slice()},ovr={red:null,blk:null},el
 function svgPt(e){const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse())}
 function mk(tag,at,parent){const e=document.createElementNS(NS,tag);for(const k in at)e.setAttribute(k,at[k]);parent.appendChild(e);return e}
 function nearest(p,pts,max){let best=null,bd=max;for(const k in pts){const d=Math.hypot(p.x-pts[k][0],p.y-pts[k][1]);if(d<bd){bd=d;best=k}}return best}
-function mkDrag(e0,mv,end){e0.addEventListener("pointerdown",e=>{e.stopPropagation();e.preventDefault();e0.setPointerCapture(e.pointerId);e0._d=1});
- e0.addEventListener("pointermove",e=>{if(e0._d)mv(svgPt(e))});
+const DRAGS=[];function mkDrag(e0,mv,end){DRAGS.push({e:e0,mv,end});e0.addEventListener("pointercancel",()=>{if(e0._d){e0._d=0;mv(null);}});
+ e0.addEventListener("pointerdown",e=>{if(e.pointerType==="touch")return;e.stopPropagation();e.preventDefault();try{e0.setPointerCapture(e.pointerId)}catch(_){}e0._d=1});
+ e0.addEventListener("pointermove",e=>{if(e0._d){e.preventDefault();mv(svgPt(e))}});
  e0.addEventListener("pointerup",e=>{if(e0._d){e0._d=0;end(svgPt(e))}})}
 const CPD=[{n:"P",x:640,y:335},{n:"M",x:589,y:335}],CTD={P:[640,335],M:[589,335]};
 function syncTip(w){const v=$(w).value,m=SRC()==="dc"?CTD:CT;tip[w]=m[v]?m[v].slice():REST[w].slice()}
@@ -275,8 +276,8 @@ function buildScene(){const g=$("plugs");
   const plug=mk("circle",{fill:c,stroke:"#ccc","stroke-width":2,class:"drag"},g);
   const tp=mk("circle",{r:10,fill:c,stroke:"#fff","stroke-width":2.5,class:"drag"},g);
   el[w]={c0,c1,plug,tip:tp};
-  mkDrag(plug,p=>{ovr[w]=[p.x,p.y];renderPlugs()},p=>{const k=nearest(p,{A:[73,500],COM:[150,500],V:[227,500]},34);if(w==="red")jack=k;else blkJack=k;ovr[w]=null;hold=false;frozen=null;update()});
-  mkDrag(tp,p=>{tip[w]=[p.x,p.y];renderPlugs()},p=>{const q=toDev(p);let b=null,bd=36;if(SRC()==="dc"){const dx=q.x-640,dy=q.y-335,d=Math.hypot(dx,dy);
+  mkDrag(plug,p=>{if(!p){ovr[w]=null;renderPlugs();return}ovr[w]=[p.x,p.y];renderPlugs()},p=>{const k=nearest(p,{A:[73,500],COM:[150,500],V:[227,500]},34);if(w==="red")jack=k;else blkJack=k;ovr[w]=null;hold=false;frozen=null;update()});
+  mkDrag(tp,p=>{if(!p){syncTip(w);renderPlugs();return}tip[w]=[p.x,p.y];renderPlugs()},p=>{const q=toDev(p);let b=null,bd=36;if(SRC()==="dc"){const dx=q.x-640,dy=q.y-335,d=Math.hypot(dx,dy);
    if(d<=30){b={n:"P",x:640,y:335}}else if(d<=72){b={n:"M",x:q.x,y:q.y}}}
   else{(CP).forEach(c=>{const d=Math.hypot(q.x-c.x,q.y-c.y);if(d<bd){bd=d;b=c}})}
   $(w).value=b?b.n:"";if(b)tip[w]=fromDev(b.x,b.y);hold=false;frozen=null;update()});
@@ -287,7 +288,7 @@ function renderPlugs(){if(!el.red)return;const both=jack&&jack===blkJack;
   const p=ovr[w]||(k?[JX[k]+(both?(w==="red"?-6:6):0),500]:PARK[w]),t=tip[w];
   const d="M"+p[0]+" "+p[1]+" C"+p[0]+" "+(p[1]+70)+" "+t[0]+" "+(t[1]+110)+" "+t[0]+" "+t[1];
   el[w].c0.setAttribute("d",d);el[w].c1.setAttribute("d",d);
-  el[w].plug.setAttribute("cx",p[0]);el[w].plug.setAttribute("cy",p[1]);el[w].plug.setAttribute("r",(both&&!ovr[w])?(MOB?7:5):(MOB?12:8));el[w].tip.setAttribute("r",MOB?17:10);
+  el[w].plug.setAttribute("cx",p[0]);el[w].plug.setAttribute("cy",p[1]);el[w].plug.setAttribute("r",(both&&!ovr[w])?(MOB?9:5):(MOB?16:8));el[w].tip.setAttribute("r",MOB?22:10);
   el[w].tip.setAttribute("cx",t[0]);el[w].tip.setAttribute("cy",t[1])})}
 function update(){
  const o=measure();
@@ -319,7 +320,7 @@ P.forEach((p,i)=>{const ang=i*18*Math.PI/180,x=150+96*Math.sin(ang),y=340-96*Mat
 let drag=false;const svg=$("meter");
 function ang(e){const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());
  let a=Math.atan2(q.x-150,-(q.y-340))*180/Math.PI;if(a<0)a+=360;return Math.round(a/18)%20}
-$("knob").addEventListener("pointerdown",e=>{drag=true;$("knob").setPointerCapture(e.pointerId);pos=ang(e);update()});
+$("knob").addEventListener("pointerdown",e=>{if(e.pointerType==="touch")return;drag=true;$("knob").setPointerCapture(e.pointerId);pos=ang(e);update()});
 $("knob").addEventListener("pointermove",e=>{if(drag){const n=ang(e);if(n!==pos){pos=n;update()}}});
 $("knob").addEventListener("pointerup",()=>drag=false);
 $("bHold").addEventListener("click",()=>{hold=!hold;if(!hold)frozen=null;update()});
@@ -363,6 +364,29 @@ function applyLayout(){const m=window.innerWidth<=700;if(m===MOB&&el.red&&LAY.do
  for(const k in REST0)REST[k]=fromDev(REST0[k][0],REST0[k][1]);
  ["red","blk"].forEach(syncTip);renderPlugs()}
 window.addEventListener("resize",applyLayout);
+svg.style.touchAction="pan-y";
+let TT=null;
+const tpt=t=>svgPt({clientX:t.clientX,clientY:t.clientY});
+const findT=(list,id)=>{for(const t of list)if(t.identifier===id)return t;return null};
+svg.addEventListener("touchstart",e=>{
+ if(TT)return;
+ const t=e.changedTouches[0],p=tpt(t);
+ let best=null,bd=MOB?36:28;
+ DRAGS.forEach(d=>{const dist=Math.hypot(p.x-(+d.e.getAttribute("cx")),p.y-(+d.e.getAttribute("cy")));if(dist<=bd){bd=dist;best=d}});
+ if(best){e.preventDefault();TT={id:t.identifier,d:best};best.mv(p);return}
+ if(Math.hypot(p.x-150,p.y-340)<=68){e.preventDefault();TT={id:t.identifier,knob:1};const n=ang(t);if(n!==pos){pos=n;update()}}
+},{passive:false});
+svg.addEventListener("touchmove",e=>{
+ if(!TT)return;const t=findT(e.changedTouches,TT.id);if(!t)return;
+ e.preventDefault();
+ if(TT.d)TT.d.mv(tpt(t));else{const n=ang(t);if(n!==pos){pos=n;update()}}
+},{passive:false});
+const tEnd=(e,cancel)=>{
+ if(!TT)return;const t=findT(e.changedTouches,TT.id);if(!t)return;
+ if(TT.d){if(cancel)TT.d.mv(null);else TT.d.end(tpt(t))}
+ TT=null};
+svg.addEventListener("touchend",e=>tEnd(e,false));
+svg.addEventListener("touchcancel",e=>tEnd(e,true));
 buildScene();applyLayout();update();
 setInterval(()=>{if(!hold){stepNoise();update()}},900);
 </script>
